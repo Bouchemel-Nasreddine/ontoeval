@@ -1,0 +1,31 @@
+/target/
+/src/main/resources/application.properties
+/src/main/resources/ontologies/
+
+# IntelliJ IDEA
+.idea/
+/*.iws
+/*.iml
+/*.ipr
+
+# VS Code
+/.vscode/
+
+# Logs
+*.log
+
+# Generated files
+*.class
+*.jar
+*.war
+*.ear
+
+# IDE specific project files
+/.classpath
+/.project
+/.settings
+/.idea
+*.iml
+*.ipr
+*.iws
+
