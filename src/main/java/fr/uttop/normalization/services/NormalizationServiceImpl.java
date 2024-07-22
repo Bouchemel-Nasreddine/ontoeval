@@ -3,9 +3,13 @@ package fr.uttop.normalization.services;
 import com.github.owlcs.ontapi.DataFactory;
 import com.github.owlcs.ontapi.Ontology;
 import com.github.owlcs.ontapi.OntologyManager;
+import com.github.sszuev.jena.ontapi.model.OntIndividual;
+import com.github.sszuev.jena.ontapi.vocabulary.RDF;
 import fr.uttop.normalization.entities.NormalizedOntology;
 import fr.uttop.ontoeval.config.AppConfig;
 import fr.uttop.ontoeval.helpers.OntologyHelper;
+import com.github.sszuev.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Resource;
 import org.semanticweb.owlapi.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -13,8 +17,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 public class NormalizationServiceImpl implements NormalizationService {
@@ -60,6 +64,54 @@ public class NormalizationServiceImpl implements NormalizationService {
 
         return normalizedOntology;
 
+    }
+
+    @Override
+    public NormalizedOntology secondNormalization(NormalizedOntology ontology) {
+        OntologyManager manager = ontology.getManager();
+        Ontology normalizedOntology = ontology.getNormalizedOntology();
+        DataFactory dataFactory = ontology.getDataFactory();
+
+        OntModel model = manager.models().findFirst().orElse(null);
+
+        if (model == null) {
+            return ontology;
+        }
+
+
+        for (OntIndividual.Anonymous anon : model.individuals().filter(OntIndividual.Anonymous.class::isInstance).map(OntIndividual.Anonymous.class::cast).toList()) {
+            String uri = "urn:uuid:" + UUID.randomUUID().toString();
+            OntIndividual.Named namedIndividual = model.createIndividual(uri);
+
+
+
+            anon.types().forEach(type -> {
+                model.add(namedIndividual, RDF.type, type);
+            });
+
+
+
+            // Copy properties from the anonymous individual to the new named individual
+            anon.listProperties().forEachRemaining(stmt -> {
+                Resource subject = stmt.getSubject();
+                if (subject.equals(anon)) {
+                    model.add(namedIndividual, stmt.getPredicate(), stmt.getObject());
+                } else {
+                    model.add(stmt.getSubject(), stmt.getPredicate(), namedIndividual);
+                }
+            });
+
+            // Remove the anonymous individual
+            model.remove(anon.listProperties());
+        }
+
+        return ontology;
+    }
+
+    @Override
+    public NormalizedOntology normalizeOntology(NormalizedOntology ontology) {
+        firstNormalization(ontology);
+        return ontology;
     }
 
     public void simplifySubSumptions(Ontology ontology, DataFactory dataFactory, Set<OWLAxiom> newAxioms, Set<OWLAxiom> axiomsToRemove ) {

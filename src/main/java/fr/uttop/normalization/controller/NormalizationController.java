@@ -42,7 +42,76 @@ public class NormalizationController {
             try {
                 File file = normalizationService.convertMultiPartToFile(ontologyFile);
                 NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
+                normalizationService.normalizeOntology(ontology);
+                System.out.println("output ontology: " + ontology.outputString());
+                ontologyHelper.reinitializeCounter();
+                return new ResponseEntity<>(ontology.outputString(), HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (OWLOntologyCreationException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else if (ontologyUrl != null && !ontologyUrl.isEmpty()) {
+            // Process the ontology URL
+            try {
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(ontologyUrl));
+                return new ResponseEntity<>(null,  HttpStatus.OK);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/first")
+    public ResponseEntity<String> firstNormalizeOntology(NormalizationDTO request ) {
+        String ontologyUrl = request.getOntologyUrl();
+        MultipartFile ontologyFile = request.getOntologyFile();
+        if (ontologyFile != null) {
+            // Process the ontology file
+            try {
+                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
                 normalizationService.firstNormalization(ontology);
+                System.out.println("output ontology: " + ontology.outputString());
+                ontologyHelper.reinitializeCounter();
+                return new ResponseEntity<>(ontology.outputString(), HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (OWLOntologyCreationException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else if (ontologyUrl != null && !ontologyUrl.isEmpty()) {
+            // Process the ontology URL
+            try {
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(ontologyUrl));
+                return new ResponseEntity<>(null,  HttpStatus.OK);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+
+    @PostMapping("/second")
+    public ResponseEntity<String> secondNormalizeOntology(NormalizationDTO request ) {
+        String ontologyUrl = request.getOntologyUrl();
+        MultipartFile ontologyFile = request.getOntologyFile();
+        if (ontologyFile != null) {
+            // Process the ontology file
+            try {
+                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
+                normalizationService.secondNormalization(ontology);
                 System.out.println("output ontology: " + ontology.outputString());
                 ontologyHelper.reinitializeCounter();
                 return new ResponseEntity<>(ontology.outputString(), HttpStatus.OK);
