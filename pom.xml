@@ -63,10 +63,38 @@
         </dependency>
 
         <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-dependencies</artifactId>
+            <version>3.3.1</version>
+            <scope>import</scope>
+            <type>pom</type>
+        </dependency>
+
+        <dependency>
             <groupId>com.github.owlcs</groupId>
             <artifactId>ontapi</artifactId>
             <version>3.5.0</version>
         </dependency>
+
+        <dependency>
+            <groupId>net.sourceforge.owlapi</groupId>
+            <artifactId>owlapi-distribution</artifactId>
+            <version>5.5.0</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>xerces</groupId>
+                    <artifactId>xercesImpl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
+
+        <dependency>
+            <groupId>net.sourceforge.owlapi</groupId>
+            <artifactId>org.semanticweb.hermit</artifactId>
+            <version>1.4.5.519</version>
+        </dependency>
+
+
 
 
     </dependencies>

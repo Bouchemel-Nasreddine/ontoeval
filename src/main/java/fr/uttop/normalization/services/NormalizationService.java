@@ -16,6 +16,8 @@ public interface NormalizationService {
 
     public NormalizedOntology secondNormalization(NormalizedOntology ontology);
 
+    public NormalizedOntology thirdNormalization(NormalizedOntology ontology);
+
     public NormalizedOntology normalizeOntology(NormalizedOntology ontology);
 
 }

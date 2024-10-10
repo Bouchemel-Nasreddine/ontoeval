@@ -136,4 +136,38 @@ public class NormalizationController {
         }
     }
 
+    @PostMapping("/third")
+    public ResponseEntity<String> thirdNormalizeOntology(NormalizationDTO request ) {
+        String ontologyUrl = request.getOntologyUrl();
+        MultipartFile ontologyFile = request.getOntologyFile();
+        if (ontologyFile != null) {
+            // Process the ontology file
+            try {
+                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
+                normalizationService.thirdNormalization(ontology);
+                System.out.println("output ontology: " + ontology.outputString());
+                ontologyHelper.reinitializeCounter();
+                return new ResponseEntity<>(ontology.outputString(), HttpStatus.OK);
+            } catch (IOException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            } catch (OWLOntologyCreationException e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else if (ontologyUrl != null && !ontologyUrl.isEmpty()) {
+            // Process the ontology URL
+            try {
+                NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(ontologyUrl));
+                return new ResponseEntity<>(null,  HttpStatus.OK);
+            } catch (Exception e) {
+                e.printStackTrace();
+                return new ResponseEntity<>(null, HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        } else {
+            return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

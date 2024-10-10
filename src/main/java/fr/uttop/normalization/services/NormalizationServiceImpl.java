@@ -9,8 +9,13 @@ import fr.uttop.normalization.entities.NormalizedOntology;
 import fr.uttop.ontoeval.config.AppConfig;
 import fr.uttop.ontoeval.helpers.OntologyHelper;
 import com.github.sszuev.jena.ontapi.model.OntModel;
+import org.apache.jena.rdf.model.Model;
 import org.apache.jena.rdf.model.Resource;
+import org.semanticweb.HermiT.Configuration;
+import org.semanticweb.HermiT.Reasoner;
 import org.semanticweb.owlapi.model.*;
+import org.semanticweb.owlapi.reasoner.Node;
+import org.semanticweb.owlapi.util.InferredOntologyGenerator;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -80,7 +85,7 @@ public class NormalizationServiceImpl implements NormalizationService {
 
 
         for (OntIndividual.Anonymous anon : model.individuals().filter(OntIndividual.Anonymous.class::isInstance).map(OntIndividual.Anonymous.class::cast).toList()) {
-            String uri = "urn:uuid:" + UUID.randomUUID().toString();
+            String uri = ontology.getOntologyUri() + "#" + UUID.randomUUID().toString();
             OntIndividual.Named namedIndividual = model.createIndividual(uri);
 
 
@@ -107,6 +112,51 @@ public class NormalizationServiceImpl implements NormalizationService {
 
         return ontology;
     }
+
+    @Override
+    public NormalizedOntology thirdNormalization(NormalizedOntology ontology) {
+        OntologyManager manager = ontology.getManager();
+        Ontology normalizedOntology = ontology.getNormalizedOntology();
+        DataFactory dataFactory = ontology.getDataFactory();
+
+        Reasoner reasoner = new Reasoner(new Configuration(), normalizedOntology);
+
+        InferredOntologyGenerator generator = new InferredOntologyGenerator(reasoner);
+        generator.fillOntology(dataFactory, normalizedOntology);
+
+        Model model = manager.models().findFirst().orElse(null);
+
+        if (model == null) {
+            return ontology;
+        }
+
+        Set<OWLClass> visited = new HashSet<>();
+        Map<Set<OWLClass>, OWLClass> cycleToNewClass = new HashMap<>();
+
+        for (OWLClass cls : normalizedOntology.classesInSignature().collect(Collectors.toSet())) {
+            if (!visited.contains(cls)) {
+                Set<OWLClass> cycle = detectCycle(cls, reasoner, new HashSet<>(), new HashSet<>());
+                if (!cycle.isEmpty()) {
+                    OWLClass newClass = createEquivalentClass(cycle, model, ontology.getNormalizedOntology(), dataFactory, ontology.getOntologyUri());
+                    cycleToNewClass.put(cycle, newClass);
+                    visited.addAll(cycle);
+                }
+            }
+        }
+
+        for (Map.Entry<Set<OWLClass>, OWLClass> entry : cycleToNewClass.entrySet()) {
+            Set<OWLClass> cycle = entry.getKey();
+            OWLClass newClass = entry.getValue();
+            replaceCycleInAxioms(cycle, newClass, normalizedOntology, dataFactory);
+        }
+
+        removeRedundantAxioms(normalizedOntology, reasoner);
+
+        normalizeClassNamesInAxioms(normalizedOntology, cycleToNewClass);
+
+        return ontology;
+    }
+
 
     @Override
     public NormalizedOntology normalizeOntology(NormalizedOntology ontology) {
@@ -194,6 +244,122 @@ public class NormalizationServiceImpl implements NormalizationService {
                 }
             }
         }
+    }
+
+    private Set<OWLClass> detectCycle(OWLClass cls, Reasoner reasoner, Set<OWLClass> path, Set<OWLClass> visited) {
+        Set<OWLClass> cycle = new HashSet<>();
+        if (path.contains(cls)) {
+            cycle.add(cls);
+            return cycle;
+        }
+
+        if (visited.contains(cls)) {
+            return cycle;
+        }
+
+        path.add(cls);
+        visited.add(cls);
+
+        for (Node<OWLClass> superClassNode : reasoner.getSuperClasses(cls, true)) {
+            OWLClass superClass = superClassNode.getRepresentativeElement();
+            cycle.addAll(detectCycle(superClass, reasoner, path, visited));
+        }
+
+        path.remove(cls);
+        return cycle;
+    }
+
+    private OWLClass createEquivalentClass(Set<OWLClass> cycle, Model model, Ontology ontology, DataFactory dataFactory, String ontologyUri) {
+        String uri = ontologyUri + "#" + UUID.randomUUID().toString();
+        OWLClass newClass = dataFactory.getOWLClass(IRI.create(uri));
+
+        for (OWLClass cls : cycle) {
+            OWLAxiom equivalentAxiom = dataFactory.getOWLEquivalentClassesAxiom(newClass, cls);
+            ontology.add(equivalentAxiom);
+        }
+
+        return newClass;
+    }
+
+    private void replaceCycleInAxioms(Set<OWLClass> cycle, OWLClass newClass, Ontology ontology, DataFactory dataFactory) {
+        Set<OWLAxiom> axiomsToRemove = new HashSet<>();
+        Set<OWLAxiom> axiomsToAdd = new HashSet<>();
+
+        for (OWLAxiom axiom : ontology.axioms().collect(Collectors.toSet())) {
+            Set<OWLClass> axiomClasses = axiom.classesInSignature().collect(Collectors.toSet());
+            if (cycle.containsAll(axiomClasses)) {
+                axiomsToRemove.add(axiom);
+            } else if (cycle.stream().anyMatch(axiomClasses::contains)) {
+                OWLAxiom newAxiom = replaceSubClassCyclesInAxiom(axiom, cycle, newClass, dataFactory);
+                axiomsToRemove.add(axiom);
+                axiomsToAdd.add(newAxiom);
+            }
+        }
+
+        ontology.remove(axiomsToRemove);
+        ontology.add(axiomsToAdd);
+    }
+
+    private OWLAxiom replaceSubClassCyclesInAxiom(OWLAxiom axiom, Set<OWLClass> cycle, OWLClass newClass, DataFactory dataFactory) {
+        // Implement logic to replace class in the given axiom with newClass
+        // This is just a placeholder; actual implementation will depend on the type of axiom
+        // For example:
+        if (axiom instanceof OWLSubClassOfAxiom) {
+            OWLSubClassOfAxiom subClassAxiom = (OWLSubClassOfAxiom) axiom;
+            OWLClassExpression subClass = subClassAxiom.getSubClass();
+            OWLClassExpression superClass = subClassAxiom.getSuperClass();
+            if (cycle.contains(subClass)) {
+                subClass = newClass;
+            }
+            if (cycle.contains(superClass)) {
+                superClass = newClass;
+            }
+            return dataFactory.getOWLSubClassOfAxiom(subClass, superClass);
+        }
+        // Handle other types of axioms similarly
+        return axiom;
+    }
+
+    private void removeRedundantAxioms(Ontology ontology, Reasoner reasoner) {
+        Set<OWLAxiom> redundantAxioms = new HashSet<>();
+        for (OWLAxiom axiom : ontology.axioms().collect(Collectors.toSet())) {
+            if (isRedundant(axiom, reasoner)) {
+                redundantAxioms.add(axiom);
+            }
+        }
+        ontology.remove(redundantAxioms);
+    }
+
+    private boolean isRedundant(OWLAxiom axiom, Reasoner reasoner) {
+        if (!(axiom instanceof OWLSubClassOfAxiom)) {
+            return false;
+        }
+
+        OWLSubClassOfAxiom subClassAxiom = (OWLSubClassOfAxiom) axiom;
+        OWLClassExpression subClass = subClassAxiom.getSubClass();
+        OWLClassExpression superClass = subClassAxiom.getSuperClass();
+
+        if (!(subClass instanceof OWLClass) || !(superClass instanceof OWLClass)) {
+            return false;
+        }
+
+        OWLClass subClassC = (OWLClass) subClass;
+        OWLClass superClassC = (OWLClass) superClass;
+
+        // Remove the axiom temporarily from the ontology to check redundancy
+        reasoner.getRootOntology().removeAxiom(axiom);
+
+        boolean isRedundant = reasoner.getSubClasses(superClassC, false).containsEntity(subClassC);
+
+        // Add the axiom back to the ontology
+        reasoner.getRootOntology().addAxiom(axiom);
+
+        return isRedundant;
+    }
+
+    private void normalizeClassNamesInAxioms(Ontology ontology, Map<Set<OWLClass>, OWLClass> cycleToNewClass) {
+        // Implement logic to normalize class names in various axioms
+        // This is just a placeholder; actual implementation will depend on the type of axiom
     }
 
 

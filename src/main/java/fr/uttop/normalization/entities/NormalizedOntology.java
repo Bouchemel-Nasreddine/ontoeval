@@ -15,10 +15,11 @@ import java.io.OutputStream;
 
 public class NormalizedOntology {
 
+    private String ontologyUri;
+
     private Ontology sourceOntology;
 
     private Ontology normalizedOntology;
-
 
     private OntologyManager manager;
 
@@ -28,6 +29,8 @@ public class NormalizedOntology {
         this.sourceOntology = sourceOntology;
         this.manager = OntManagers.createManager();
         this.dataFactory = manager.getOWLDataFactory();
+
+        this.ontologyUri = sourceOntology.asGraphModel().getID().toString();
 
         this.normalizedOntology = this.manager.createOntology();
         this.manager.addAxioms(this.normalizedOntology, this.sourceOntology.getAxioms());
@@ -56,6 +59,14 @@ public class NormalizedOntology {
 
     public void setSourceOntology(Ontology sourceOntology) {
         this.sourceOntology = sourceOntology;
+    }
+
+    public String getOntologyUri() {
+        return ontologyUri;
+    }
+
+    public void setOntologyUri(String ontologyUri) {
+        this.ontologyUri = ontologyUri;
     }
 
     public Ontology getNormalizedOntology() {
