@@ -40,7 +40,7 @@ public class NormalizationController {
         if (ontologyFile != null) {
             // Process the ontology file
             try {
-                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                File file = ontologyHelper.convertMultiPartToFile(ontologyFile);
                 NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
                 normalizationService.normalizeOntology(ontology);
                 System.out.println("output ontology: " + ontology.outputString());
@@ -74,7 +74,7 @@ public class NormalizationController {
         if (ontologyFile != null) {
             // Process the ontology file
             try {
-                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                File file = ontologyHelper.convertMultiPartToFile(ontologyFile);
                 NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
                 normalizationService.firstNormalization(ontology);
                 System.out.println("output ontology: " + ontology.outputString());
@@ -109,7 +109,7 @@ public class NormalizationController {
         if (ontologyFile != null) {
             // Process the ontology file
             try {
-                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                File file = ontologyHelper.convertMultiPartToFile(ontologyFile);
                 NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
                 normalizationService.secondNormalization(ontology);
                 System.out.println("output ontology: " + ontology.outputString());
@@ -143,7 +143,7 @@ public class NormalizationController {
         if (ontologyFile != null) {
             // Process the ontology file
             try {
-                File file = normalizationService.convertMultiPartToFile(ontologyFile);
+                File file = ontologyHelper.convertMultiPartToFile(ontologyFile);
                 NormalizedOntology ontology = new NormalizedOntology(ontologyHelper.readOntology(file));
                 normalizationService.thirdNormalization(ontology);
                 System.out.println("output ontology: " + ontology.outputString());

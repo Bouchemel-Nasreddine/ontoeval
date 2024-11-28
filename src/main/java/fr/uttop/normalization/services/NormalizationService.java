@@ -10,8 +10,6 @@ import java.io.IOException;
 
 public interface NormalizationService {
 
-    public File convertMultiPartToFile(MultipartFile file) throws IOException;
-
     public NormalizedOntology firstNormalization(NormalizedOntology ontology);
 
     public NormalizedOntology secondNormalization(NormalizedOntology ontology);

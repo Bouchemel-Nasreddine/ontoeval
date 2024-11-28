@@ -28,20 +28,9 @@ import java.util.stream.Collectors;
 @Service
 public class NormalizationServiceImpl implements NormalizationService {
 
-    private final String uploadDir;
-
-    @Autowired
-    public NormalizationServiceImpl(AppConfig appConfig) {
-        this.uploadDir = appConfig.getUploadDir();
-    }
     @Autowired
     OntologyHelper ontologyHelper;
 
-    public File convertMultiPartToFile(MultipartFile file) throws IOException {
-        File convFile = new File(uploadDir + file.getOriginalFilename());
-        file.transferTo(convFile);
-        return convFile;
-    }
 
     public NormalizedOntology firstNormalization(NormalizedOntology normalizedOntology) {
 
